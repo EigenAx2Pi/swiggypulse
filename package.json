@@ -1,0 +1,22 @@
+{
+  "name": "swiggypulse",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI-powered growth copilot for Swiggy restaurant partners. Built on Swiggy MCP.",
+  "scripts": {
+    "dev": "concurrently -k -n server,web -c cyan,magenta \"pnpm --filter @swiggypulse/server dev\" \"pnpm --filter @swiggypulse/web dev\"",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "generate:mock": "pnpm --filter @swiggypulse/mcp-mock generate"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.1",
+    "playwright": "^1.59.1",
+    "typescript": "^5.6.3"
+  },
+  "packageManager": "pnpm@10.33.2",
+  "engines": {
+    "node": ">=20"
+  }
+}

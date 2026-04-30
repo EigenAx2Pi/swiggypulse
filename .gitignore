@@ -1,0 +1,26 @@
+node_modules
+dist
+build
+.DS_Store
+*.log
+.env
+.env.local
+.env.*.local
+
+# Build artifacts
+packages/*/dist
+packages/*/build
+packages/web/dist
+packages/server/dist
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
+.idea
+
+# Playwright
+playwright-report
+test-results
+
+# pnpm
+.pnpm-store
