@@ -147,10 +147,6 @@ swiggypulse/
 
 **Prototype (Mock Data)** — Awaiting Swiggy Builders Club staging credentials to connect to live MCP endpoints. The MCP client layer is a one-line swap (`USE_MOCK=false`).
 
-## License
-
-MIT
-
 ---
 
 *Powered by Swiggy MCP · Built for [Swiggy Builders Club](https://mcp.swiggy.com/builders)*
