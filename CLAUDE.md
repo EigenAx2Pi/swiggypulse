@@ -21,8 +21,18 @@ pnpm monorepo with three packages:
 
 ```bash
 pnpm install
-pnpm dev   # server :3001 + web :3000
+pnpm dev         # runs server (:3001) + web (:3000) together via concurrently — one command
+pnpm build       # build all packages
+pnpm typecheck   # typecheck all packages
+pnpm generate:mock   # regenerate the correlated mock seed data
 ```
+
+There is no lint script (despite `pnpm lint` delegating with `-r`, no package
+defines a `lint` target). Type safety is enforced via `pnpm typecheck`.
+
+Chat endpoint: **`POST /api/chat`** (router mounted at `/api` in
+`packages/server/src/index.ts`; handler in `packages/server/src/routes/api.ts`).
+Body: `{ message: string, history? }`.
 
 ## Where the insight engine logic lives
 
