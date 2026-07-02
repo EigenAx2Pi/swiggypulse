@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.32.1",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "@swiggypulse/mcp-mock": "workspace:*",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
