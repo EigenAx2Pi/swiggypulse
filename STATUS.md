@@ -2,14 +2,14 @@
 project: swiggypulse
 mode: Frozen
 stage: Building
-tag: PARKED-PREMISE-DEAD
+tag: PARKED
 wip: false
 spine: false
 track: C-Showcase
 next_action: DECIDE pivot-to-consumer-agent vs shelf — merchant-analytics premise
   is unfeedable by the consumer-only Swiggy MCP (verified live 2026-07-02). Integration
   code is reusable for a consumer-side agent.
-last_touched: '2026-07-02'
+last_touched: '2026-07-06'
 ---
 # Status — SwiggyPulse
 
@@ -53,6 +53,7 @@ signing the partner agreement (agreement/PAN only gates production).
   OpenWeatherMap (`OPENWEATHER_API_KEY`).
 
 ## Known caveats (honest)
+- **Visibility:** repo is PUBLIC by deliberate owner choice (confirmed 2026-07-06); pivot/shelve/archive decision still pending.
 - **Shape mismatch risk:** the analyzer expects the mock's TS shapes (`Restaurant`,
   `Order`, …). Real Swiggy tool output likely differs; a mapping layer between
   `RealMCPClient` output and the analyzer types is probably needed after first live call.
