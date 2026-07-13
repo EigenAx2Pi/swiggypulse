@@ -9,7 +9,7 @@ track: C-Showcase
 next_action: DECIDE pivot-to-consumer-agent vs shelf — merchant-analytics premise
   is unfeedable by the consumer-only Swiggy MCP (verified live 2026-07-02). Integration
   code is reusable for a consumer-side agent.
-last_touched: '2026-07-06'
+last_touched: '2026-07-07'
 ---
 # Status — SwiggyPulse
 
