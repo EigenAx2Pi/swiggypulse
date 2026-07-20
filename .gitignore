@@ -25,3 +25,8 @@ test-results
 # pnpm
 .pnpm-store
 *.tsbuildinfo
+
+# Generated mock seed data — regenerate with `pnpm generate:mock`.
+# NEVER tracked: `generate.ts` writes here, and a consumer-side rebuild would
+# seed these from a live pull of a real person's Swiggy order history.
+packages/*/data/
