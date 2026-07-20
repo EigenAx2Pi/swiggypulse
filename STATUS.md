@@ -1,21 +1,43 @@
 ---
 project: swiggypulse
 mode: Frozen
-stage: Building
-tag: PARKED
+stage: Done
+tag: ARCHIVED
 wip: false
 spine: false
 track: C-Showcase
-next_action: DECIDE pivot-to-consumer-agent vs shelf — merchant-analytics premise
-  is unfeedable by the consumer-only Swiggy MCP (verified live 2026-07-02). Integration
-  code is reusable for a consumer-side agent.
-last_touched: '2026-07-07'
+next_action: 'Product is closed — no further work on this repo. Remaining follow-up
+  lives elsewhere: extract the MCP OAuth 2.1 + PKCE + DCR client and the two-request
+  server-side redirect pattern into a standalone repo. See DECISIONS.md 2026-07-20.'
+last_touched: '2026-07-20'
 ---
 # Status — SwiggyPulse
 
-**Last updated:** 2026-07-01
+**Last updated:** 2026-07-20
 
 ## Focus
+**CLOSED (2026-07-20).** Both premises are dead and the product is archived.
+
+The merchant premise died on 2026-07-02 (the Builders Club MCP is consumer-only —
+no partner analytics tools exist). The **consumer pivot died on 2026-07-20**, killed by
+a premortem *before any code was written*: Swiggy ships the same idea as its own
+advertised hello-world, at least five free products already do it, the underlying
+`get_orders` tool has open upstream defects, and the app could never reach a second
+user. Full autopsy in [DECISIONS.md](./DECISIONS.md).
+
+[ROADMAP.md](./ROADMAP.md) describes the cancelled consumer plan and is **superseded** —
+kept only as the record of what was considered.
+
+**What this repo is now:** a working, live-verified reference implementation of MCP
+OAuth 2.1 + PKCE + Dynamic Client Registration against a real issuer, wrapped in a
+merchant dashboard that runs on synthetic data. The auth layer is the part worth
+keeping; extracting it is tracked in DECISIONS.md, not here.
+
+## Prior focus (consumer-pivot era — cancelled)
+MVP was to be the "Food Spend Mirror" — read your own order history, reflect spending
+back. Cancelled at the scoping gate. No code was written against it.
+
+## Prior focus (merchant era — historical)
 Real Swiggy MCP integration wired. Builders Club approved SwiggyPulse (2026-06-30),
 and dynamic client registration is open — so live mode works on localhost WITHOUT
 signing the partner agreement (agreement/PAN only gates production).
@@ -53,7 +75,9 @@ signing the partner agreement (agreement/PAN only gates production).
   OpenWeatherMap (`OPENWEATHER_API_KEY`).
 
 ## Known caveats (honest)
-- **Visibility:** repo is PUBLIC by deliberate owner choice (confirmed 2026-07-06); pivot/shelve/archive decision still pending.
+- **Visibility:** repo is PUBLIC by deliberate owner choice (confirmed 2026-07-06).
+  Decision resolved 2026-07-19 → **pivot to consumer**. Note the raised stakes: a tool
+  that reads personal order history means no real-order fixtures may ever be committed.
 - **Shape mismatch risk:** the analyzer expects the mock's TS shapes (`Restaurant`,
   `Order`, …). Real Swiggy tool output likely differs; a mapping layer between
   `RealMCPClient` output and the analyzer types is probably needed after first live call.
