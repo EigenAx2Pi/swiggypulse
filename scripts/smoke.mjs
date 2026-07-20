@@ -7,6 +7,17 @@ import { dirname, join } from 'node:path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const OUT_DIR = join(__dirname, '..', 'docs', 'screenshots');
+
+// The PNGs under OUT_DIR are TRACKED and this script overwrites them in place.
+// Against live data that would render a real person's order history into files
+// git already follows — one `git add -A` publishes it. Mock mode only, no override.
+if ((process.env.USE_MOCK ?? 'true').toLowerCase() === 'false') {
+  console.error(
+    'refusing to run: USE_MOCK=false would write live personal data into tracked screenshots.',
+  );
+  process.exit(1);
+}
+
 mkdirSync(OUT_DIR, { recursive: true });
 
 const PAGES = [
