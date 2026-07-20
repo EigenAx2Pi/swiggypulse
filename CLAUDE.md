@@ -40,9 +40,17 @@ Body: `{ message: string, history? }`.
 - `packages/server/src/agent/recommendations.ts` — 8-12 generated recommendations from analyzer output
 - `packages/server/src/agent/chat.ts` — conversational handler (Claude or pre-canned)
 
+## Real MCP mode
+
+Live Swiggy MCP is wired (`USE_MOCK=false`). It uses OAuth 2.1 + PKCE with dynamic
+client registration — no client secret and no signed agreement needed for localhost
+dev (the agreement/PAN only gates production). Flow: `RealMCPClient` (in
+`mcp/client.ts`) + `SwiggyOAuthProvider` (in `auth/oauth.ts`) → interactive login via
+`/auth/start` → `/auth/callback`. See STATUS.md for verified endpoints + caveats.
+
 ## What NOT to add here
 
-- Real Swiggy MCP credentials (no access until Builders Club acceptance)
+- A production-partner client secret / the signed agreement in git (prod access only)
 - A database (intentionally session-scoped)
 - Tests (skipped for time — structure is testable; this is a demo)
 - Deployment config (local-only for now)

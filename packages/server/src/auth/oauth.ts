@@ -1,31 +1,26 @@
-import { createHash, randomBytes } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
+import type { OAuthClientProvider } from '@modelcontextprotocol/sdk/client/auth.js';
+import type {
+  OAuthClientMetadata,
+  OAuthClientInformationMixed,
+  OAuthTokens,
+} from '@modelcontextprotocol/sdk/shared/auth.js';
+import { logger } from '../lib/logger.js';
 
 /**
- * OAuth 2.1 + PKCE skeleton for Swiggy MCP.
+ * OAuth 2.1 + PKCE for Swiggy MCP.
  *
- * In mock mode this returns a fake token immediately — no redirect. In live mode
- * it would emit the authorization URL, store the verifier in session, and exchange
- * the callback code for an access token (5-day lifetime, no refresh in v1).
+ * Two paths live here:
+ *  - Mock mode: `startMockSession` hands back a fake token immediately, no redirect.
+ *  - Live mode: `SwiggyOAuthProvider` implements the MCP SDK's OAuthClientProvider.
+ *    The SDK drives Dynamic Client Registration (/auth/register), PKCE (S256), the
+ *    /auth/authorize redirect and the /auth/token exchange + refresh. Endpoints are
+ *    discovered by the SDK from the server's protected-resource metadata — verified
+ *    live: issuer https://mcp.swiggy.com/auth, DCR open, public client (auth method
+ *    "none"), scopes mcp:tools mcp:resources mcp:prompts.
+ *
+ * All state is in-memory / session-scoped — no DB, no PII at rest.
  */
-
-const CLIENT_ID = process.env['SWIGGY_CLIENT_ID'] ?? 'SWIGGYPULSE_DEV';
-const REDIRECT_URI = process.env['OAUTH_REDIRECT_URI'] ?? 'http://localhost:3001/auth/callback';
-const SCOPE = 'mcp:tools mcp:resources mcp:prompts';
-
-export interface PKCEPair {
-  verifier: string;
-  challenge: string;
-}
-
-export function generatePKCE(): PKCEPair {
-  const verifier = base64url(randomBytes(64));
-  const challenge = base64url(createHash('sha256').update(verifier).digest());
-  return { verifier, challenge };
-}
-
-function base64url(buf: Buffer): string {
-  return buf.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-}
 
 export interface AuthSession {
   accessToken: string;
@@ -35,19 +30,6 @@ export interface AuthSession {
 
 // Session-scoped, in-memory only — no DB, no PII at rest
 const sessions = new Map<string, AuthSession>();
-
-export function buildAuthorizationUrl(challenge: string, state: string): string {
-  const url = new URL(process.env['SWIGGY_MCP_FOOD_URL'] ?? 'https://mcp.swiggy.com');
-  url.pathname = '/oauth/authorize';
-  url.searchParams.set('response_type', 'code');
-  url.searchParams.set('client_id', CLIENT_ID);
-  url.searchParams.set('redirect_uri', REDIRECT_URI);
-  url.searchParams.set('code_challenge', challenge);
-  url.searchParams.set('code_challenge_method', 'S256');
-  url.searchParams.set('scope', SCOPE);
-  url.searchParams.set('state', state);
-  return url.toString();
-}
 
 export function startMockSession(sessionId: string): AuthSession {
   const session: AuthSession = {
@@ -67,4 +49,103 @@ export function getSession(sessionId: string): AuthSession | undefined {
     return undefined;
   }
   return s;
+}
+
+/**
+ * Live-mode OAuth provider handed to StreamableHTTPClientTransport as `authProvider`.
+ * The SDK calls these methods; we just persist the bits it produces for the session.
+ */
+export class SwiggyOAuthProvider implements OAuthClientProvider {
+  private _clientInfo: OAuthClientInformationMixed | undefined;
+  private _tokens: OAuthTokens | undefined;
+  private _verifier: string | undefined;
+  private _state: string | undefined;
+
+  /**
+   * Set by `redirectToAuthorization` when the SDK needs the user to log in.
+   * The /auth/start route reads this and returns it to the browser to redirect.
+   */
+  pendingAuthorizationUrl: string | undefined;
+
+  constructor(private readonly _redirectUri: string) {}
+
+  get redirectUrl(): string {
+    return this._redirectUri;
+  }
+
+  get clientMetadata(): OAuthClientMetadata {
+    return {
+      client_name: 'SwiggyPulse',
+      redirect_uris: [this._redirectUri],
+      grant_types: ['authorization_code', 'refresh_token'],
+      response_types: ['code'],
+      // Public client + loopback redirect — no client secret (Swiggy AS allows "none").
+      token_endpoint_auth_method: 'none',
+      scope: 'mcp:tools mcp:resources mcp:prompts',
+    };
+  }
+
+  /** CSRF state; compared against the callback's `state` before finishing auth. */
+  state(): string {
+    this._state = randomUUID();
+    return this._state;
+  }
+
+  get lastState(): string | undefined {
+    return this._state;
+  }
+
+  /**
+   * Clears the one-time login state after a completed code exchange, so a callback
+   * (state + code) cannot be replayed against an already-finished flow.
+   */
+  clearAuthFlowState(): void {
+    this._state = undefined;
+    this.pendingAuthorizationUrl = undefined;
+  }
+
+  clientInformation(): OAuthClientInformationMixed | undefined {
+    return this._clientInfo;
+  }
+
+  saveClientInformation(info: OAuthClientInformationMixed): void {
+    this._clientInfo = info;
+    logger.info('swiggy DCR client registered', {
+      clientId: (info as { client_id?: string }).client_id,
+    });
+  }
+
+  tokens(): OAuthTokens | undefined {
+    return this._tokens;
+  }
+
+  saveTokens(tokens: OAuthTokens): void {
+    this._tokens = tokens;
+    logger.info('swiggy oauth tokens stored', {
+      tokenType: tokens.token_type,
+      expiresIn: tokens.expires_in,
+      hasRefresh: Boolean(tokens.refresh_token),
+    });
+  }
+
+  redirectToAuthorization(authorizationUrl: URL): void {
+    this.pendingAuthorizationUrl = authorizationUrl.toString();
+    logger.info('swiggy authorization required', { url: this.pendingAuthorizationUrl });
+  }
+
+  saveCodeVerifier(codeVerifier: string): void {
+    this._verifier = codeVerifier;
+  }
+
+  codeVerifier(): string {
+    if (!this._verifier) throw new Error('no PKCE code verifier saved for this session');
+    return this._verifier;
+  }
+
+  invalidateCredentials(scope: 'all' | 'client' | 'tokens' | 'verifier' | 'discovery'): void {
+    if (scope === 'all' || scope === 'tokens') this._tokens = undefined;
+    if (scope === 'all' || scope === 'client') this._clientInfo = undefined;
+    if (scope === 'all' || scope === 'verifier') this._verifier = undefined;
+    logger.warn('swiggy credentials invalidated', { scope });
+  }
 }

@@ -85,7 +85,7 @@ export async function answerChat(req: ChatRequest, ctx: ChatContext): Promise<Ch
   try {
     const system = `You are SwiggyPulse, an AI growth copilot for a Swiggy restaurant partner. Answer questions concisely (2-4 sentences max) using the data context provided. Always be specific — cite numbers when relevant. Never make up data not present in the context. If the question is outside scope, redirect to performance/coupons/weather/peak-hour topics.\n\nContext:\n${buildContextSummary(ctx)}`;
     const res = await a.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: process.env['ANTHROPIC_MODEL'] || 'claude-sonnet-4-20250514',
       max_tokens: 500,
       system,
       messages: [

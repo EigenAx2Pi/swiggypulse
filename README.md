@@ -83,14 +83,16 @@ Open `http://localhost:3000`. Runs in **mock mode** by default — no Swiggy cre
 All optional in mock mode.
 
 ```env
-USE_MOCK=true                       # set to false when Swiggy staging credentials are issued
+USE_MOCK=true                       # false = hit the live Swiggy MCP servers
 
-# Swiggy MCP — issued by Builders Club after acceptance
-SWIGGY_CLIENT_ID=
-SWIGGY_CLIENT_SECRET=
+# Swiggy MCP — no client id/secret needed: the client self-registers via Dynamic
+# Client Registration (public client, OAuth 2.1 + PKCE). No signed agreement needed
+# for localhost dev; the Builders Club agreement only gates production.
 SWIGGY_MCP_FOOD_URL=https://mcp.swiggy.com/food
 SWIGGY_MCP_INSTAMART_URL=https://mcp.swiggy.com/im
 SWIGGY_MCP_DINEOUT_URL=https://mcp.swiggy.com/dineout
+OAUTH_REDIRECT_URI=http://localhost:3001/auth/callback
+# LIVE_STRICT=1                      # disable mock fallback to surface raw live shapes
 
 # Anthropic — chat falls back to pre-canned responses if missing
 ANTHROPIC_API_KEY=
@@ -98,6 +100,11 @@ ANTHROPIC_API_KEY=
 # OpenWeatherMap — falls back to mock weather if missing
 OPENWEATHER_API_KEY=
 ```
+
+**Live mode:** start with `USE_MOCK=false`, then `GET /auth/start` returns a Swiggy
+authorization URL — open it, log in with a Swiggy account, and the `/auth/callback`
+route exchanges the code for tokens. Tool calls then hit the live servers; anything
+that errors or returns an unrecognized shape degrades to mock (logged per tool).
 
 ## MCP Integration
 
@@ -145,7 +152,27 @@ swiggypulse/
 
 ## Status
 
-**Prototype (Mock Data)** — Awaiting Swiggy Builders Club staging credentials to connect to live MCP endpoints. The MCP client layer is a one-line swap (`USE_MOCK=false`).
+**Live MCP integration built + verified (2026-07-02).** OAuth 2.1 + PKCE with dynamic
+client registration works end-to-end against the real Swiggy servers; one login covers
+Food, Instamart and Dineout. The client layer flips with `USE_MOCK=false`.
+
+### Live findings (important)
+Connecting live revealed a **platform/premise mismatch**: the Swiggy Builders Club MCP is
+a **consumer ordering agent**, not a merchant one. `listTools()` confirms every server
+exposes only consumer verbs — `search → cart → place_food_order / checkout / book_table →
+track`. There is **no merchant/partner analytics tool** (no sales reports, partner order
+history, menu-performance or covers data). `get_food_orders` returns the *signed-in user's*
+own orders, not a restaurant's.
+
+SwiggyPulse's premise — a **restaurant-partner** growth/analytics copilot — therefore
+cannot be fed by this MCP, regardless of arguments (signing the production agreement would
+not change it). Runs stay fully functional because every live call gracefully degrades to
+the mock analytics layer.
+
+**What remains reusable:** the live integration — OAuth/DCR/PKCE client, streamable-HTTP
+transport, and the defensive shape-adapter + fallback layer — works against any
+**consumer-side** Swiggy agent. Re-aiming the product (order/track/book) is a viable pivot;
+the merchant dashboard is not.
 
 ---
 
