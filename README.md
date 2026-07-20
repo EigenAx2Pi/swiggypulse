@@ -1,179 +1,140 @@
-# SwiggyPulse
+# SwiggyPulse — archived
 
-> AI-powered growth copilot for Swiggy restaurant partners. Built on Swiggy's MCP APIs.
+> A restaurant-analytics copilot built against Swiggy's MCP servers, **archived because
+> live testing disproved its premise.** What's left is a working, live-verified reference
+> implementation of **MCP OAuth 2.1 + PKCE + Dynamic Client Registration** against a real
+> production authorization server — plus an honest record of what the platform actually
+> exposes, which contradicted what its docs implied.
 
-![SwiggyPulse Dashboard](docs/screenshots/hero.png)
+> [!IMPORTANT]
+> **Not affiliated with, endorsed by, or connected to Swiggy.** This is an independent
+> project built against Swiggy's public [Builders Club](https://mcp.swiggy.com/builders)
+> MCP servers. "Swiggy" is their trademark, used here only to describe what this code
+> talks to. No production integration agreement was signed; this never ran anywhere but
+> localhost.
 
-## What is SwiggyPulse?
-
-SwiggyPulse helps restaurant partners on Swiggy increase order volume and optimize menu performance. It analyzes order patterns, delivery performance, coupon effectiveness, and cross-references with external signals like weather and local events to **generate actionable growth recommendations** — not vanity dashboards.
-
-**Example insight:** *"Your Chicken Biryani orders spike 1.6x on rainy evenings. Forecast shows 3 rainy days this week and you have no weather-triggered promotions. Estimated upside: ₹10,000+ in incremental orders."*
-
-The goal: **healthier restaurants → more supply → more orders → stronger Swiggy marketplace.**
-
-## Architecture
-
-```mermaid
-graph LR
-    subgraph "SwiggyPulse Agent"
-        AUTH[OAuth 2.1 + PKCE]
-        MCP_CLIENT[MCP Client Layer]
-        ANALYZER[Analysis Engine]
-        ENRICHMENT[Enrichment Layer]
-        RECO[Recommendation Engine]
-        DASHBOARD[React Dashboard]
-        CHAT[Chat Copilot]
-    end
-
-    subgraph "Swiggy MCP Servers"
-        FOOD[Food Server<br/>14 tools]
-        INSTAMART[Instamart Server<br/>13 tools]
-        DINEOUT[Dineout Server<br/>8 tools]
-    end
-
-    subgraph "External APIs"
-        WEATHER[OpenWeatherMap]
-        EVENTS[Local Events]
-    end
-
-    AUTH --> MCP_CLIENT
-    MCP_CLIENT --> FOOD
-    MCP_CLIENT --> INSTAMART
-    MCP_CLIENT --> DINEOUT
-    FOOD --> ANALYZER
-    INSTAMART --> ANALYZER
-    DINEOUT --> ANALYZER
-    WEATHER --> ENRICHMENT
-    EVENTS --> ENRICHMENT
-    ENRICHMENT --> ANALYZER
-    ANALYZER --> RECO
-    RECO --> DASHBOARD
-    RECO --> CHAT
-```
-
-| Layer | What it does |
-|---|---|
-| **MCP Client** | Connects to Swiggy Food / Instamart / Dineout MCP servers via OAuth 2.1 + PKCE. Swappable: `USE_MOCK=true` for the bundled mock, `false` for live. |
-| **Analysis Engine** | Computes restaurant- and item-level metrics: revenue, AOV, cancellation rate, peak hours, repeat-customer rate, weather correlation, coupon ROI. |
-| **Enrichment Layer** | Weather (OpenWeatherMap), time-of-day patterns, local events. Augments raw order data with external signals. |
-| **Recommendation Engine** | Claude-powered insight generator. Produces 8-12 prioritized, dollar-quantified actions per restaurant. |
-| **Dashboard** | React + Tailwind + Recharts. 7 pages: overview, menu, coupons, weather, recommendations, dine-in, chat. |
-| **Chat Copilot** | Conversational interface. "Why did orders drop last Tuesday?" → data-backed answer. |
-
-## Quick Start
-
-### Prerequisites
-- Node.js 20+
-- pnpm 10+ (or use `corepack enable`)
-
-### Install & Run
-```bash
-git clone https://github.com/EigenAx2Pi/swiggypulse.git
-cd swiggypulse
-pnpm install
-pnpm generate:mock   # generates 90 days of correlated mock orders + weather
-pnpm dev             # server :3001 + web :3000
-```
-
-Open `http://localhost:3000`. Runs in **mock mode** by default — no Swiggy credentials required.
-
-### Environment Variables
-
-All optional in mock mode.
-
-```env
-USE_MOCK=true                       # false = hit the live Swiggy MCP servers
-
-# Swiggy MCP — no client id/secret needed: the client self-registers via Dynamic
-# Client Registration (public client, OAuth 2.1 + PKCE). No signed agreement needed
-# for localhost dev; the Builders Club agreement only gates production.
-SWIGGY_MCP_FOOD_URL=https://mcp.swiggy.com/food
-SWIGGY_MCP_INSTAMART_URL=https://mcp.swiggy.com/im
-SWIGGY_MCP_DINEOUT_URL=https://mcp.swiggy.com/dineout
-OAUTH_REDIRECT_URI=http://localhost:3001/auth/callback
-# LIVE_STRICT=1                      # disable mock fallback to surface raw live shapes
-
-# Anthropic — chat falls back to pre-canned responses if missing
-ANTHROPIC_API_KEY=
-
-# OpenWeatherMap — falls back to mock weather if missing
-OPENWEATHER_API_KEY=
-```
-
-**Live mode:** start with `USE_MOCK=false`, then `GET /auth/start` returns a Swiggy
-authorization URL — open it, log in with a Swiggy account, and the `/auth/callback`
-route exchanges the code for tokens. Tool calls then hit the live servers; anything
-that errors or returns an unrecognized shape degrades to mock (logged per tool).
-
-## MCP Integration
-
-SwiggyPulse connects to all three Swiggy MCP servers:
-
-| Server | Tools used | Purpose |
-|---|---|---|
-| **Food** | `get_addresses`, `search_restaurants`, `get_restaurant_menu`, `get_food_orders`, `fetch_food_coupons` | Order history, menu data, coupon performance |
-| **Instamart** | `search_products`, `your_go_to_items` | Cross-sell signals and category demand |
-| **Dineout** | `search_restaurants_dineout`, `get_restaurant_details`, `get_available_slots` | Dine-in vs delivery pattern analysis |
-
-The mock layer (`packages/mcp-mock`) returns realistic responses matching Swiggy's documented schemas. Mock data is **deterministically generated** — patterns (rain → biryani spike, weekend lift, evening peak, coupon AOV lift) are reproducible across runs.
-
-## Pages
-
-| Page | Highlights |
-|---|---|
-| **Dashboard** | 30-day metric cards, daily order chart with rainy-day overlay, top items, hourly heatmap |
-| **Menu Performance** | Sortable table of all items — units sold, revenue, rating, trend. Click for item-level detail |
-| **Coupon Analysis** | Per-coupon redemption count, AOV lift, estimated discount cost, ROI |
-| **Weather Impact** | Pearson correlation, scatter plot, weather-sensitive items, opportunity calendar |
-| **Recommendations** | 8-12 AI-generated actions, prioritized, with dollar estimates |
-| **Dine-in vs Delivery** | Weekly comparison from Swiggy Dineout vs delivery patterns |
-| **Chat Copilot** | Conversational interface — natural language queries against your data |
-
-## Project Structure
-
-```
-swiggypulse/
-├── packages/
-│   ├── mcp-mock/        # Mock Swiggy MCP clients + generated seed data
-│   ├── server/          # Express + analyzer + recommendations + chat
-│   └── web/             # React + Vite + Tailwind dashboard
-├── docs/screenshots/    # Auto-generated via scripts/smoke.mjs
-├── scripts/smoke.mjs    # Playwright smoke test — drives all 7 pages
-└── .env.example
-```
-
-## Compliance
-
-- **Data residency:** Designed for AWS Mumbai (ap-south-1)
-- **PII handling:** No PII stored at rest — session-scoped processing only
-- **DPDP 2023:** Swiggy-originated data governed by platform terms
-- **Error handling:** Exponential backoff with jitter, check-then-retry for non-idempotent calls
-
-## Status
-
-**Live MCP integration built + verified (2026-07-02).** OAuth 2.1 + PKCE with dynamic
-client registration works end-to-end against the real Swiggy servers; one login covers
-Food, Instamart and Dineout. The client layer flips with `USE_MOCK=false`.
-
-### Live findings (important)
-Connecting live revealed a **platform/premise mismatch**: the Swiggy Builders Club MCP is
-a **consumer ordering agent**, not a merchant one. `listTools()` confirms every server
-exposes only consumer verbs — `search → cart → place_food_order / checkout / book_table →
-track`. There is **no merchant/partner analytics tool** (no sales reports, partner order
-history, menu-performance or covers data). `get_food_orders` returns the *signed-in user's*
-own orders, not a restaurant's.
-
-SwiggyPulse's premise — a **restaurant-partner** growth/analytics copilot — therefore
-cannot be fed by this MCP, regardless of arguments (signing the production agreement would
-not change it). Runs stay fully functional because every live call gracefully degrades to
-the mock analytics layer.
-
-**What remains reusable:** the live integration — OAuth/DCR/PKCE client, streamable-HTTP
-transport, and the defensive shape-adapter + fallback layer — works against any
-**consumer-side** Swiggy agent. Re-aiming the product (order/track/book) is a viable pivot;
-the merchant dashboard is not.
+**Status: closed. Not maintained. Do not deploy.** See [DECISIONS.md](./DECISIONS.md) for
+the full autopsy and [STATUS.md](./STATUS.md) for the state at close.
 
 ---
 
-*Powered by Swiggy MCP · Built for [Swiggy Builders Club](https://mcp.swiggy.com/builders)*
+## The useful part: what Swiggy's MCP actually exposes
+
+This is the reason the repo still exists. All of it was **verified live** on 2026-07-02
+against `https://mcp.swiggy.com`, and some of it contradicted the documentation.
+
+**Auth works, and it's more open than expected.**
+
+| Finding | Detail |
+|---|---|
+| Issuer | `https://mcp.swiggy.com/auth` — *not* the `/oauth/authorize` path an earlier guess assumed |
+| Dynamic Client Registration | **Open and unauthenticated.** `POST /auth/register` issues `client_id: swiggy-mcp` |
+| Client type | Public client — `token_endpoint_auth_method: "none"`. No client secret |
+| Signed agreement | **Not required for localhost.** The PAN/agreement form gates *production* only |
+| Token | Bearer, **~5-day expiry, no refresh token issued** |
+| Scopes | `mcp:tools mcp:resources mcp:prompts` — granted all-or-nothing |
+
+**But the servers are consumer-only, and that is what killed the product.**
+
+`listTools()` against all three servers (`/food`, `/im`, `/dineout`) returns only consumer
+ordering verbs — search → cart → `place_food_order` / checkout / `book_table` → track.
+**There is no merchant or partner analytics tool anywhere:** no sales reports, no partner
+order history, no menu-performance data, no covers. `get_food_orders` returns the
+*signed-in user's own* orders, not a restaurant's sales.
+
+So a restaurant-partner analytics copilot cannot be built on this platform, and no
+approval or signed agreement changes that. If you are planning something merchant-shaped
+against Swiggy's MCP: it will not work. That finding is the main thing this repo has to
+offer you.
+
+## Why the consumer pivot was also killed
+
+The obvious salvage — re-aim it as a consumer app reading your own order history — was
+scoped and then cancelled at the gate, before any code was written. Four reasons, any one
+sufficient:
+
+1. **The platform ships it as its own hello-world.** Swiggy's Builders Club material
+   advertises exactly this: *"AI assistants like Claude analyze your Swiggy order history
+   and give personalised insights on food habits and spending."* Connect the MCP to Claude
+   and type one sentence — no app required.
+2. **The category is saturated and free** — Snackalytics, Swiggy Order Stats, fooddy.in,
+   Spenddy, `mr-karan/swiggy-analytics`.
+3. **The data source has open upstream defects** — Swiggy's manifest repo carries
+   unanswered issues [#36](https://github.com/Swiggy/swiggy-mcp-server-manifest/issues/36)
+   (`get_orders` returns stale data, frozen ~2 weeks back) and
+   [#15](https://github.com/Swiggy/swiggy-mcp-server-manifest/issues/15) (`get_orders`
+   returns 0 orders).
+4. **It could never reach a second user** — production needs the unsigned agreement, and
+   the server is single-tenant by construction.
+
+Full reasoning in [DECISIONS.md](./DECISIONS.md).
+
+## What's worth reading in the code
+
+| Path | Why |
+|---|---|
+| [`packages/server/src/auth/oauth.ts`](packages/server/src/auth/oauth.ts) | Server-side `OAuthClientProvider` for the MCP SDK. Handles the problem the SDK's own examples skip: a **browser** OAuth flow spanning two HTTP requests, rather than a blocking CLI redirect. Includes CSRF `state` with one-time replay protection. |
+| [`packages/server/src/mcp/client.ts`](packages/server/src/mcp/client.ts) | Streamable-HTTP transport, one connection per server sharing a single login, lazy connect, `listTools()` logging on connect. |
+| [`packages/server/src/mcp/adapters.ts`](packages/server/src/mcp/adapters.ts) | Per-tool shape validators that coerce live output into expected types and degrade rather than crash on drift. |
+| [`packages/mcp-mock/src/generate.ts`](packages/mcp-mock/src/generate.ts) | Deterministic correlated seed generation — rain → volume lift, weekend lift, evening peak, Pareto customer base. |
+
+> [!WARNING]
+> **Known defects — fix before reusing this code.**
+> - `isAuthorized()` only checks whether a token *exists*, never whether it expired, and
+>   the connected-server set is never cleared. After the ~5-day expiry the client degrades
+>   to mock data permanently, with no re-auth path short of a process restart.
+> - Credentials are in-memory only, so every restart forces a fresh DCR + browser login.
+> - Single-tenant by construction (module-level singleton client, unkeyed response cache).
+>   Safe on localhost for one person; **unsafe to host as-is.**
+
+## Running it
+
+Mock mode only. Live mode still connects, but every call returns consumer-shaped data the
+merchant analyzer can't use, so it falls back to mock anyway.
+
+```bash
+pnpm install
+pnpm generate:mock   # required — seed data is generated, not committed
+pnpm dev             # server :3001 + web :3000
+```
+
+Open `http://localhost:3000`. No credentials needed.
+
+```env
+USE_MOCK=true         # false = hit live Swiggy MCP (self-registers via DCR, no secret)
+ANTHROPIC_API_KEY=    # absent → chat falls back to pre-canned replies
+OPENWEATHER_API_KEY=  # absent → mock weather
+LIVE_STRICT=1         # disable mock fallback, surface raw live shapes
+```
+
+`pnpm generate:mock` is **required** before the first run — seed data is deliberately not
+committed, so that a live-mode run can never write a real person's order history into
+tracked files.
+
+## Data handling
+
+The honest version, replacing the aspirational compliance section this README used to
+carry:
+
+- **Localhost-only personal tool.** Never hosted; no production agreement signed.
+- **Nothing persists.** No database; tokens and responses are in-memory and die with the
+  process. That is a consequence of the design, not a compliance control.
+- **No real data in the repo.** Seed data is generated and gitignored, and
+  `scripts/smoke.mjs` refuses to run in live mode so screenshots cannot capture real
+  orders.
+- **Not DPDP-scoped** as a single-user personal tool. It *would* be, immediately, if
+  hosted for anyone else — and the architecture above is not fit for that.
+
+## Structure
+
+```
+packages/mcp-mock/   # mock MCP clients + deterministic seed generator
+packages/server/     # express + OAuth/MCP client + analyzer + recommendations + chat
+packages/web/        # react + vite + tailwind dashboard (7 pages, mock data)
+scripts/smoke.mjs    # playwright smoke test; refuses to run in live mode
+```
+
+![SwiggyPulse dashboard, running on generated mock data](docs/screenshots/hero.png)
+
+*The screenshots in `docs/screenshots/` show the merchant dashboard on **generated mock
+data**. No real order data appears anywhere in this repository.*
