@@ -9,7 +9,7 @@ track: C-Showcase
 next_action: 'Product is closed — no further work on this repo. Remaining follow-up
   lives elsewhere: extract the MCP OAuth 2.1 + PKCE + DCR client and the two-request
   server-side redirect pattern into a standalone repo. See DECISIONS.md 2026-07-20.'
-last_touched: '2026-07-20'
+last_touched: '2026-07-21'
 ---
 # Status — SwiggyPulse
 
