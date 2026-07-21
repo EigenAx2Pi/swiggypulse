@@ -138,3 +138,8 @@ scripts/smoke.mjs    # playwright smoke test; refuses to run in live mode
 
 *The screenshots in `docs/screenshots/` show the merchant dashboard on **generated mock
 data**. No real order data appears anywhere in this repository.*
+
+## License
+
+[MIT](./LICENSE) — take the auth layer and the findings and do what you like with them.
+Read the known-defects warning above first.

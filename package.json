@@ -2,7 +2,8 @@
   "name": "swiggypulse",
   "version": "0.1.0",
   "private": true,
-  "description": "AI-powered growth copilot for Swiggy restaurant partners. Built on Swiggy MCP.",
+  "description": "Archived. A restaurant-analytics copilot whose premise Swiggy's consumer-only MCP disproved; kept as a live-verified MCP OAuth 2.1 + PKCE + DCR reference.",
+  "license": "MIT",
   "scripts": {
     "dev": "concurrently -k -n server,web -c cyan,magenta \"pnpm --filter @swiggypulse/server dev\" \"pnpm --filter @swiggypulse/web dev\"",
     "build": "pnpm -r build",
