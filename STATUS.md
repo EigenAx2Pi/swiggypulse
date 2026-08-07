@@ -1,8 +1,8 @@
 ---
 project: swiggypulse
 mode: Frozen
-stage: Done
-tag: ARCHIVED
+stage: Retired
+tag: PARKED
 wip: false
 spine: false
 track: C-Showcase
